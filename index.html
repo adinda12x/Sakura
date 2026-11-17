@@ -3,25 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sakura Lakeside Park — Taman Danau Bunga Sakura</title>
+  <title>Taman Danau Sakura</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="app-shell">
-    <canvas id="sceneCanvas" aria-label="Animasi taman tepi danau dengan bunga sakura berjatuhan dan orang bersantai"></canvas>
+  <canvas id="parkCanvas"></canvas>
 
-    <header class="overlay-header">
-      <div class="badge">GitHub Pages Scene</div>
-      <h1>Sakura Lakeside Park</h1>
-      <p>Taman tepi danau dengan kelopak sakura berjatuhan &amp; suasana warga bersantai.</p>
-    </header>
-
-    <section class="controls" aria-label="Kontrol suasana taman">
-      <button id="toggleTimeBtn" type="button">Suasana: Sore Hangat</button>
-      <button id="toggleWindBtn" type="button">Angin: Sedang</button>
-      <button id="togglePauseBtn" type="button">Jeda Animasi</button>
-    </section>
-  </main>
+  <div class="hud">
+    <button id="btnTime" type="button">Waktu: Senja</button>
+    <button id="btnWind" type="button">Angin: Sedang</button>
+    <button id="btnBurst" type="button">Tabur Sakura</button>
+    <button id="btnPause" type="button">Jeda</button>
+  </div>
 
   <script src="script.js"></script>
 </body>
