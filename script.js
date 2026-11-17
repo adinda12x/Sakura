@@ -15,12 +15,12 @@ let timeIndex = 0; // 0: Pagi, 1: Sore, 2: Malam
 let windLevel = 1;
 let frame = 0;
 
-// Shading & pencahayaan berbeda untuk Pagi, Sore, dan Malam
+// Setiap waktu memakai sumber cahaya, arah bayangan, rim light, dan warna shading yang berbeda
 const timeProfiles = [
   {
     name: "Pagi",
     tag: "Pagi · Cahaya Samping Kiri",
-    desc: "Sinar pagi dari kiri atas, bayangan panjang ke kanan, kelopak sakura putih-merah muda cerah.",
+    desc: "Sinar pagi segar dari kiri atas, bayangan panjang ke kanan, embun di permukaan danau.",
     skyTop: "#4ea8de",
     skyMid: "#9be2fe",
     skyBottom: "#f4fbfd",
@@ -34,20 +34,17 @@ const timeProfiles = [
     grassLit: "#82cc78",
     grassShade: "#4b8c58",
     pathColor: "#f3e5c8",
-    // Warna sakura khas Somei Yoshino (pangkal pucat ke ujung pink lembut)
-    petalBase: "#ffffff",
-    petalMid: "#ffd6e5",
-    petalTip: "#f29ab8",
-    stamen: "#c93b6b",
-    anther: "#f5c242",
-    branchColor: "#5c4033",
+    sakuraLit: "#fff2f7",
+    sakuraMid: "#ffc2d6",
+    sakuraShadow: "#d982a3",
+    stamenColor: "#c93b6b",
     lanternLit: false,
     vignetteAlpha: 0.08,
   },
   {
     name: "Sore",
-    tag: "Sore · Golden Hour Kanan",
-    desc: "Cahaya keemasan rendah dari kanan, kelopak sakura berkilau hangat di sisi terang dan teduh di sisi kiri.",
+    tag: "Sore · Golden Hour Samping Kanan",
+    desc: "Cahaya keemasan rendah dari kanan, rim light hangat pada kelopak sakura dan pantulan jingga.",
     skyTop: "#3d4675",
     skyMid: "#c96a7b",
     skyBottom: "#ffd09b",
@@ -61,19 +58,17 @@ const timeProfiles = [
     grassLit: "#9a8f58",
     grassShade: "#3d5947",
     pathColor: "#e6c69c",
-    petalBase: "#fff4e4",
-    petalMid: "#f8b4c8",
-    petalTip: "#d97296",
-    stamen: "#b02658",
-    anther: "#ffd166",
-    branchColor: "#4a3228",
+    sakuraLit: "#ffe8c2",
+    sakuraMid: "#f49bb8",
+    sakuraShadow: "#9e4d73",
+    stamenColor: "#b8295a",
     lanternLit: true,
     vignetteAlpha: 0.22,
   },
   {
     name: "Malam",
-    tag: "Malam · Bulan & Lentera",
-    desc: "Kontras malam dengan cahaya bulan kebiruan dan pantulan hangat lentera pada kuntum sakura.",
+    tag: "Malam · Bulan & Lentera Hangat",
+    desc: "Kontras gelap-terang dengan cahaya bulan dingin dari atas dan halo hangat dari lentera taman.",
     skyTop: "#0b1024",
     skyMid: "#1b2749",
     skyBottom: "#2e3c68",
@@ -87,19 +82,17 @@ const timeProfiles = [
     grassLit: "#2f574b",
     grassShade: "#142623",
     pathColor: "#7e788a",
-    petalBase: "#e8dce6",
-    petalMid: "#cf9bb5",
-    petalTip: "#9e6282",
-    stamen: "#ff9ebb",
-    anther: "#ffe08a",
-    branchColor: "#2b1f26",
+    sakuraLit: "#ffd9e8",
+    sakuraMid: "#b87494",
+    sakuraShadow: "#59334d",
+    stamenColor: "#ff9ebb",
     lanternLit: true,
     vignetteAlpha: 0.45,
   },
 ];
 
 let trees = [];
-let blossomClusters = [];
+let blossoms = []; // bunga sakura 5 kelopak nyata di tajuk
 let lanterns = [];
 let people = [];
 let petals = [];
@@ -126,33 +119,27 @@ function buildScene() {
     return {
       x: width * (0.1 + i * 0.16),
       y: isFront ? lakeBottomY + 20 + (i % 2) * 14 : horizonY + 14,
-      scale: isFront ? 1.12 : 0.78,
+      scale: isFront ? 1.12 : 0.76,
       shake: 0,
       seed: i * 2.1,
     };
   });
 
-  // Ranting dan gugusan kuntum bunga sakura (umbel) agar tajuk tidak tampak seperti bola padat
-  blossomClusters = [];
+  // Sebarkan kuntum bunga sakura 5-kelopak di sekitar tajuk pohon
+  blossoms = [];
   trees.forEach((t, tIdx) => {
-    const clusterCount = Math.round(18 * t.scale);
-    for (let i = 0; i < clusterCount; i++) {
-      const angle = (i / clusterCount) * Math.PI * 2 + tIdx * 0.7;
-      const radius = (0.28 + ((i * 41) % 72) / 100) * 52 * t.scale;
-      const ox = Math.cos(angle) * radius;
-      const oy = -88 * t.scale + Math.sin(angle) * radius * 0.65;
-      // 2-3 kuntum bunga per ranting kecil
-      const flowersInCluster = 2 + (i % 2);
-      for (let f = 0; f < flowersInCluster; f++) {
-        blossomClusters.push({
-          treeIndex: tIdx,
-          ox: ox + (f - 0.5) * 9 * t.scale,
-          oy: oy + ((f % 2) * 2 - 1) * 6 * t.scale,
-          size: (6.2 + ((i + f) % 3) * 1.4) * t.scale,
-          rot: (i * 1.35 + f * 0.9) % (Math.PI * 2),
-          tilt: 0.72 + ((i + f) % 3) * 0.12, // kemiringan perspektif kelopak
-        });
-      }
+    const count = Math.round(26 * t.scale);
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + tIdx;
+      const dist = (0.25 + ((i * 37) % 75) / 100) * 44 * t.scale;
+      blossoms.push({
+        treeIndex: tIdx,
+        ox: Math.cos(angle) * dist,
+        oy: -90 * t.scale + Math.sin(angle) * dist * 0.62,
+        size: (5.5 + (i % 4) * 1.4) * t.scale,
+        rot: (i * 1.1) % (Math.PI * 2),
+        litBias: Math.cos(angle),
+      });
     }
   });
 
@@ -181,25 +168,25 @@ function createPetal(randomY = false) {
   return {
     x: Math.random() * width,
     y: randomY ? Math.random() * height : -12,
-    size: 4.5 + Math.random() * 4,
-    vy: 0.6 + Math.random() * 1.05,
+    size: 4 + Math.random() * 4.5,
+    vy: 0.65 + Math.random() * 1.1,
     phase: Math.random() * Math.PI * 2,
     tumble: Math.random() * Math.PI * 2,
-    tumbleSpeed: 0.035 + Math.random() * 0.04,
+    tumbleSpeed: 0.04 + Math.random() * 0.05,
     yaw: Math.random() * Math.PI * 2,
   };
 }
 
-function spawnBurst(x, y, count = 36) {
+function spawnBurst(x, y, count = 34) {
   for (let i = 0; i < count; i++) {
     petals.push({
-      x: x + (Math.random() - 0.5) * 95,
-      y: y + (Math.random() - 0.5) * 50,
-      size: 4.5 + Math.random() * 4.2,
-      vy: 0.55 + Math.random() * 1.2,
+      x: x + (Math.random() - 0.5) * 90,
+      y: y + (Math.random() - 0.5) * 45,
+      size: 4.2 + Math.random() * 4.5,
+      vy: 0.55 + Math.random() * 1.25,
       phase: Math.random() * Math.PI * 2,
       tumble: Math.random() * Math.PI * 2,
-      tumbleSpeed: 0.045 + Math.random() * 0.045,
+      tumbleSpeed: 0.05 + Math.random() * 0.05,
       yaw: Math.random() * Math.PI * 2,
     });
   }
@@ -208,123 +195,71 @@ function spawnBurst(x, y, count = 36) {
   }
 }
 
-// Gambar 1 kuntum bunga sakura realistis (5 kelopak berlekuk V + gradasi + urat + benang sari)
-function drawRealisticSakuraFlower(x, y, size, rot, tilt, profile, lightSide) {
+// Gambar 1 kuntum bunga sakura 5 kelopak berlekuk V + benang sari
+function drawSakuraBlossom(x, y, size, rot, profile, litFactor = 0.5) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rot);
-  ctx.scale(1, tilt);
+
+  const petalColor =
+    litFactor > 0.35
+      ? profile.sakuraLit
+      : litFactor > -0.25
+      ? profile.sakuraMid
+      : profile.sakuraShadow;
 
   for (let p = 0; p < 5; p++) {
     ctx.save();
     ctx.rotate((p * Math.PI * 2) / 5);
 
-    // Gradasi radial tiap kelopak dari pangkal pucat ke ujung berlekuk pink
-    const grad = ctx.createLinearGradient(0, 0, 0, -size * 1.15);
-    grad.addColorStop(0, profile.petalBase);
-    grad.addColorStop(0.55, lightSide > 0 ? profile.petalMid : profile.petalBase);
-    grad.addColorStop(1, lightSide > 0 ? profile.petalMid : profile.petalTip);
-
-    ctx.fillStyle = grad;
+    ctx.fillStyle = petalColor;
     ctx.beginPath();
-    ctx.moveTo(0, -size * 0.08);
-    // Lobus kiri
-    ctx.bezierCurveTo(
-      -size * 0.58,
-      -size * 0.18,
-      -size * 0.68,
-      -size * 0.92,
-      -size * 0.16,
-      -size * 1.08
-    );
-    // Lekukan V khas kelopak sakura
-    ctx.lineTo(0, -size * 0.84);
-    // Lobus kanan
-    ctx.lineTo(size * 0.16, -size * 1.08);
-    ctx.bezierCurveTo(
-      size * 0.68,
-      -size * 0.92,
-      size * 0.58,
-      -size * 0.18,
-      0,
-      -size * 0.08
-    );
+    ctx.moveTo(0, 0);
+    // Lobus kiri berlekuk V di ujung kelopak
+    ctx.bezierCurveTo(-size * 0.55, -size * 0.25, -size * 0.65, -size * 0.95, -size * 0.14, -size * 1.05);
+    ctx.lineTo(0, -size * 0.82);
+    // Lobus kanan berlekuk V
+    ctx.lineTo(size * 0.14, -size * 1.05);
+    ctx.bezierCurveTo(size * 0.65, -size * 0.95, size * 0.55, -size * 0.25, 0, 0);
     ctx.closePath();
     ctx.fill();
-
-    // Garis urat kelopak halus
-    ctx.strokeStyle = "rgba(214, 112, 148, 0.28)";
-    ctx.lineWidth = 0.65;
-    ctx.beginPath();
-    ctx.moveTo(0, -size * 0.12);
-    ctx.lineTo(0, -size * 0.78);
-    ctx.stroke();
-
     ctx.restore();
   }
 
-  // Lingkaran kecil di pusat bunga
-  ctx.fillStyle = profile.stamen;
+  // Pusat bunga & benang sari halus
+  ctx.fillStyle = profile.stamenColor;
   ctx.beginPath();
-  ctx.arc(0, 0, size * 0.14, 0, Math.PI * 2);
+  ctx.arc(0, 0, size * 0.18, 0, Math.PI * 2);
   ctx.fill();
 
-  // Benang sari panjang tipis + kepala sari (anther)
-  for (let s = 0; s < 8; s++) {
-    const a = (s * Math.PI * 2) / 8 + 0.22;
-    const len = size * (0.34 + (s % 2) * 0.08);
-    const sx = Math.cos(a) * len;
-    const sy = Math.sin(a) * len;
-
-    ctx.strokeStyle = profile.stamen;
-    ctx.lineWidth = 0.7;
+  ctx.strokeStyle = profile.stamenColor;
+  ctx.lineWidth = 0.9;
+  for (let s = 0; s < 5; s++) {
+    const a = (s * Math.PI * 2) / 5 + 0.3;
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(sx * 0.5, sy * 0.5 - 1, sx, sy);
+    ctx.lineTo(Math.cos(a) * size * 0.36, Math.sin(a) * size * 0.36);
     ctx.stroke();
-
-    ctx.fillStyle = profile.anther;
-    ctx.beginPath();
-    ctx.arc(sx, sy, size * 0.055, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   ctx.restore();
 }
 
-// Gambar kelopak jatuh dengan lekukan V dan lipatan 3D
-function drawRealisticFallingPetal(pt, profile) {
-  const foreshorten = 0.26 + Math.abs(Math.cos(pt.tumble)) * 0.74;
+// Gambar kelopak jatuh dengan efek 3D-foreshortened (memutar & menyempit saat melayang)
+function drawFallingPetal(pt, profile) {
+  const foreshorten = 0.28 + Math.abs(Math.cos(pt.tumble)) * 0.72;
   ctx.save();
   ctx.translate(pt.x, pt.y);
   ctx.rotate(pt.yaw);
   ctx.scale(1, foreshorten);
 
-  const grad = ctx.createLinearGradient(0, -pt.size * 0.5, 0, pt.size * 0.5);
-  grad.addColorStop(0, profile.petalBase);
-  grad.addColorStop(1, profile.petalTip);
-
-  ctx.fillStyle = grad;
+  ctx.fillStyle = Math.sin(pt.tumble) > 0 ? profile.sakuraLit : profile.sakuraMid;
   ctx.beginPath();
-  ctx.moveTo(0, -pt.size * 0.15);
-  ctx.bezierCurveTo(
-    pt.size * 0.55,
-    -pt.size * 0.55,
-    pt.size * 0.65,
-    pt.size * 0.28,
-    pt.size * 0.16,
-    pt.size * 0.52
-  );
+  ctx.moveTo(0, -pt.size * 0.45);
+  ctx.bezierCurveTo(pt.size * 0.55, -pt.size * 0.55, pt.size * 0.65, pt.size * 0.25, pt.size * 0.15, pt.size * 0.5);
   ctx.lineTo(0, pt.size * 0.28);
-  ctx.lineTo(-pt.size * 0.16, pt.size * 0.52);
-  ctx.bezierCurveTo(
-    -pt.size * 0.65,
-    pt.size * 0.28,
-    -pt.size * 0.55,
-    -pt.size * 0.55,
-    0,
-    -pt.size * 0.15
-  );
+  ctx.lineTo(-pt.size * 0.15, pt.size * 0.5);
+  ctx.bezierCurveTo(-pt.size * 0.65, pt.size * 0.25, -pt.size * 0.55, -pt.size * 0.55, 0, -pt.size * 0.45);
   ctx.closePath();
   ctx.fill();
 
@@ -360,6 +295,7 @@ function drawWorld(profile) {
   ctx.fillStyle = lakeGrad;
   ctx.fillRect(0, horizonY, width, lakeBottomY - horizonY);
 
+  // Kolom pantulan matahari/bulan di air
   const sheenGrad = ctx.createLinearGradient(lightX, horizonY, lightX, lakeBottomY);
   sheenGrad.addColorStop(0, profile.lakeSheen);
   sheenGrad.addColorStop(1, "rgba(255,255,255,0)");
@@ -405,7 +341,7 @@ function drawWorld(profile) {
     ctx.stroke();
   });
 
-  // 4. Lentera taman
+  // 4. Lentera taman (menyala hangat di Sore & Malam)
   lanterns.forEach((l) => {
     if (profile.lanternLit) {
       const glowR = timeIndex === 2 ? 78 : 42;
@@ -423,11 +359,11 @@ function drawWorld(profile) {
     ctx.fillRect(l.x - 4, l.y - 26, 8, 10);
   });
 
-  // 5. Pohon sakura: batang + cabang tipis + kuntum bunga sakura 5-kelopak realistis
+  // 5. Pohon sakura & kuntum 5 kelopak
   trees.forEach((t, idx) => {
     const sway = Math.sin(frame * 0.018 + t.seed) * 3.5 + Math.sin(t.shake) * 9;
 
-    // Bayangan di tanah
+    // Bayangan di tanah sesuai shadowDir tiap waktu
     ctx.fillStyle = `rgba(10, 14, 24, ${profile.shadowAlpha})`;
     ctx.beginPath();
     ctx.ellipse(
@@ -441,53 +377,46 @@ function drawWorld(profile) {
     );
     ctx.fill();
 
-    // Batang & percabangan ranting
-    ctx.strokeStyle = profile.branchColor;
-    ctx.lineCap = "round";
-
-    ctx.lineWidth = 8 * t.scale;
+    // Batang pohon
+    ctx.fillStyle = timeIndex === 2 ? "#2c2229" : "#563d2d";
     ctx.beginPath();
-    ctx.moveTo(t.x, t.y);
-    ctx.quadraticCurveTo(t.x - 4 * t.scale, t.y - 42 * t.scale, t.x + sway * 0.4, t.y - 78 * t.scale);
-    ctx.stroke();
+    ctx.moveTo(t.x - 7 * t.scale, t.y);
+    ctx.quadraticCurveTo(t.x - 3, t.y - 42 * t.scale, t.x - 11 * t.scale + sway * 0.4, t.y - 82 * t.scale);
+    ctx.lineTo(t.x + 11 * t.scale + sway * 0.4, t.y - 82 * t.scale);
+    ctx.quadraticCurveTo(t.x + 3, t.y - 42 * t.scale, t.x + 7 * t.scale, t.y);
+    ctx.closePath();
+    ctx.fill();
 
-    const branches = [
-      [-38, -94, -14, -66],
-      [38, -92, 14, -66],
-      [-24, -112, -4, -74],
-      [26, -110, 4, -74],
+    // Tajuk ber-shading
+    const puffs = [
+      { dx: -32 * t.scale + sway, dy: -84 * t.scale, r: 34 * t.scale, c: profile.sakuraMid },
+      { dx: 32 * t.scale + sway, dy: -82 * t.scale, r: 34 * t.scale, c: profile.sakuraShadow },
+      { dx: sway, dy: -102 * t.scale, r: 42 * t.scale, c: profile.sakuraLit },
     ];
-    branches.forEach(([bx1, by1, bx2, by2]) => {
-      ctx.lineWidth = 3.2 * t.scale;
+    puffs.forEach((p) => {
+      ctx.fillStyle = p.c;
       ctx.beginPath();
-      ctx.moveTo(t.x + bx2 * t.scale + sway * 0.4, t.y + by2 * t.scale);
-      ctx.quadraticCurveTo(
-        t.x + (bx1 + bx2) * 0.5 * t.scale + sway * 0.7,
-        t.y + (by1 + by2) * 0.5 * t.scale,
-        t.x + bx1 * t.scale + sway,
-        t.y + by1 * t.scale
-      );
-      ctx.stroke();
+      ctx.arc(t.x + p.dx, t.y + p.dy, p.r, 0, Math.PI * 2);
+      ctx.fill();
     });
 
-    // Kuntum bunga sakura realistis di ujung ranting
-    blossomClusters
+    // Kuntum bunga sakura 5-kelopak nyata
+    blossoms
       .filter((b) => b.treeIndex === idx)
       .forEach((b) => {
-        const lightSide = (b.ox / 55) * (lightX < t.x ? -1 : 1);
-        drawRealisticSakuraFlower(
+        const sideFactor = (b.ox / 45) * (lightX < t.x ? -1 : 1);
+        drawSakuraBlossom(
           t.x + b.ox + sway,
           t.y + b.oy,
           b.size,
-          b.rot + sway * 0.015,
-          b.tilt,
+          b.rot + sway * 0.02,
           profile,
-          lightSide
+          sideFactor
         );
       });
   });
 
-  // 6. Orang berjalan / menyapa
+  // 6. Orang berjalan / menyapa + bayangan arah cahaya
   people.forEach((p) => {
     const wave = p.greetTimer > 0 ? Math.sin(frame * 0.35) * 6 : 0;
     const step = p.greetTimer > 0 ? 0 : Math.sin(frame * 0.08 + p.phase) * 6;
@@ -495,6 +424,7 @@ function drawWorld(profile) {
     ctx.save();
     ctx.translate(p.x, p.y);
 
+    // Bayangan orang
     ctx.fillStyle = `rgba(10, 14, 24, ${profile.shadowAlpha})`;
     ctx.beginPath();
     ctx.ellipse(profile.shadowDir[0] * 14, 2, 11, 3.5, 0, 0, Math.PI * 2);
@@ -537,8 +467,8 @@ function drawWorld(profile) {
     ctx.restore();
   });
 
-  // 7. Kelopak sakura berjatuhan realistis
-  petals.forEach((pt) => drawRealisticFallingPetal(pt, profile));
+  // 7. Kelopak sakura berjatuhan (3D-foreshortened)
+  petals.forEach((pt) => drawFallingPetal(pt, profile));
 
   // 8. Vignette atmosferik per waktu
   const vig = ctx.createRadialGradient(
@@ -593,7 +523,7 @@ function update() {
   petals.forEach((pt, idx) => {
     pt.phase += 0.03;
     pt.tumble += pt.tumbleSpeed;
-    pt.yaw += 0.014;
+    pt.yaw += 0.015;
     pt.x += wind + Math.sin(pt.phase) * 0.85;
     pt.y += pt.vy;
     if (pt.y > height + 15 || pt.x > width + 25 || pt.x < -25) {
@@ -625,10 +555,10 @@ canvas.addEventListener("pointerdown", (e) => {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
-  const hitTree = trees.find((t) => Math.hypot(x - t.x, y - (t.y - 82 * t.scale)) < 62);
+  const hitTree = trees.find((t) => Math.hypot(x - t.x, y - (t.y - 80 * t.scale)) < 60);
   if (hitTree) {
     hitTree.shake = 12;
-    spawnBurst(hitTree.x, hitTree.y - 86 * t.scale, 40);
+    spawnBurst(hitTree.x, hitTree.y - 85 * hitTree.scale, 38);
     notes.push({ x, y: y - 10, text: "Sakura gugur!", alpha: 1 });
     return;
   }
